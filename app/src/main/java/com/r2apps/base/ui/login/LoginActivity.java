@@ -1,9 +1,9 @@
 package com.r2apps.base.ui.login;
 
 import android.content.Intent;
-import android.support.v7.app.AppCompatActivity;
-
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -17,18 +17,18 @@ import android.widget.Toast;
 import com.r2apps.base.R;
 import com.r2apps.base.ui.core.BaseActivity;
 import com.r2apps.base.ui.home.MainActivity;
-import com.r2apps.base.util.AppConstants;
+import com.r2apps.base.util.AppPermissions;
+
+import timber.log.Timber;
 
 /**
  * A login screen that offers login via email/password.
  */
-public class LoginActivity extends BaseActivity implements LoginView, OnClickListener{
+public class LoginActivity extends BaseActivity implements Login.View, OnClickListener {
 
     // UI references.
     private AutoCompleteTextView mEmailView;
     private EditText mPasswordView;
-    private View mProgressView;
-    private View mLoginFormView;
 
     private LoginPresenter presenter;
 
@@ -36,7 +36,8 @@ public class LoginActivity extends BaseActivity implements LoginView, OnClickLis
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
-        presenter = new LoginPresenter(this);
+        presenter = new LoginPresenter();
+        presenter.takeView(this);
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
 
@@ -44,19 +45,16 @@ public class LoginActivity extends BaseActivity implements LoginView, OnClickLis
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                if (id == R.id.login || id == EditorInfo.IME_NULL) {
-
-                    return true;
-                }
-                return false;
+                return id == R.id.login || id == EditorInfo.IME_NULL;
             }
         });
 
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mEmailSignInButton.setOnClickListener(this);
 
-        mLoginFormView = findViewById(R.id.login_form);
-        mProgressView = findViewById(R.id.login_progress);
+        if (!AppPermissions.checkPermissionsForStorage(this)) {
+            AppPermissions.askForRationalStorage(this);
+        }
     }
 
     @Override
@@ -67,50 +65,23 @@ public class LoginActivity extends BaseActivity implements LoginView, OnClickLis
 
     @Override
     public void showProgress() {
-        mProgressView.setVisibility(View.VISIBLE);
-        mLoginFormView.setVisibility(View.GONE);
+        showLoading();
     }
 
     @Override
     public void hideProgress() {
-        mProgressView.setVisibility(View.GONE);
-        mLoginFormView.setVisibility(View.VISIBLE);
+        hideLoading();
     }
 
     @Override
-    public void setUsernameError(byte error) {
-        switch(error){
-            case AppConstants.FieldCheck.EMPTY:
-                mEmailView.setError(getString(R.string.error_field_required));
-                break;
-
-            case AppConstants.FieldCheck.INCORRECT:
-                mEmailView.setError(getString(R.string.error_invalid_email));
-                break;
-
-            case AppConstants.FieldCheck.INVALID:
-                mEmailView.setError(getString(R.string.error_invalid_email));
-                break;
-        }
+    public void setUsernameError(int errorString) {
+        mEmailView.setError(getString(errorString));
         setFocus(mEmailView);
     }
 
     @Override
-    public void setPasswordError(byte error) {
-
-        switch(error){
-            case AppConstants.FieldCheck.EMPTY:
-                mPasswordView.setError(getString(R.string.error_field_required));
-                break;
-
-            case AppConstants.FieldCheck.INCORRECT:
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                break;
-
-            case AppConstants.FieldCheck.INVALID:
-                mPasswordView.setError(getString(R.string.error_invalid_password));
-                break;
-        }
+    public void setPasswordError(int errorString) {
+        mPasswordView.setError(getString(errorString));
         setFocus(mPasswordView);
     }
 
@@ -129,6 +100,7 @@ public class LoginActivity extends BaseActivity implements LoginView, OnClickLis
 
     @Override
     public void onResponse(byte requestCode, Object response) {
+        hideLoading();
         Toast.makeText(this, "Response Received", Toast.LENGTH_SHORT).show();
         navigateToHome();
     }
@@ -137,6 +109,40 @@ public class LoginActivity extends BaseActivity implements LoginView, OnClickLis
     public void onFailure(byte requestCode, byte responseCode, String message) {
         hideProgress();
         Toast.makeText(this, "Error Received", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String permissions[], @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case AppPermissions.PERMISSIONS_REQUEST_READ_WRITE_STORAGE:
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Timber.i("Permission granted");
+                }
+                break;
+        }
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public boolean isInternetAvailable() {
+        return isConnectedToInternet();
+    }
+
+    @Override
+    public void showNoInternetDialog() {
+
+    }
+
+    @Override
+    public void hideSoftKeyboard() {
+        hideSoftKeyboard();
     }
 }
 

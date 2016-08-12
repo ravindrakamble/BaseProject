@@ -2,45 +2,46 @@ package com.r2apps.base.ui.login;
 
 import android.text.TextUtils;
 
+import com.r2apps.base.R;
 import com.r2apps.base.model.request.LoginRequest;
 import com.r2apps.base.model.response.LoginResponse;
 import com.r2apps.base.rest.APIManager;
 import com.r2apps.base.rest.ApiService;
 
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-import static com.r2apps.base.util.AppConstants.*;
+import static com.r2apps.base.util.AppConstants.Request;
 
 /**
  * Created by user on 7/12/2016.
  */
-public class LoginPresenter {
-    private LoginView loginView;
+public class LoginPresenter implements Login.Presenter{
     private ApiService service;
-
-    public LoginPresenter(LoginView loginView){
-        this.loginView = loginView;
+    private Login.View view;
+    public LoginPresenter(){
         service = APIManager.getInstance().getAPIService();
     }
 
+    @Override
     public void validateCredentials(String username, String password) {
         if (TextUtils.isEmpty(username)) {
-            loginView.setUsernameError(FieldCheck.EMPTY);
+            view.setUsernameError(R.string.error_field_required);
             return;
         }
         if (TextUtils.isEmpty(password)) {
-            loginView.setPasswordError(FieldCheck.EMPTY);
+            view.setPasswordError(R.string.error_field_required);
             return;
         }
 
-        loginView.showProgress();
-        executeLoginRequest(new LoginRequest(username, password));
+        if(view.isInternetAvailable()) {
+            view.showProgress();
+            executeLoginRequest(new LoginRequest(username, password));
+        }else{
+            view.showNoInternetDialog();
+        }
     }
 
     private void executeLoginRequest(LoginRequest request) {
@@ -50,18 +51,40 @@ public class LoginPresenter {
                 .subscribe(new Subscriber<LoginResponse>() {
                     @Override
                     public void onCompleted() {
+                        /**
+                         * Currently there is nothing to handle on complete.
+                         */
                     }
 
                     @Override
                     public void onError(Throwable e) {
-                        loginView.onFailure(Request.LOGIN, (byte) 0, e.getMessage());
+                        view.onFailure(Request.LOGIN, (byte) 0, e.getMessage());
                     }
 
                     @Override
                     public void onNext(LoginResponse loginResponse) {
-                        loginView.onResponse(Request.LOGIN, loginResponse);
+                        view.onResponse(Request.LOGIN, loginResponse);
                     }
                 });
+    }
+
+    @Override
+    public void takeView(Login.View view) {
+        this.view = view;
+    }
+
+    @Override
+    public boolean hasView() {
+        if(view != null){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    @Override
+    public Login.View view() {
+        return view;
     }
 
     public void onDestroy(){
@@ -69,7 +92,7 @@ public class LoginPresenter {
     }
 
     public void clear(){
-        loginView = null;
+        view = null;
         service = null;
     }
 }

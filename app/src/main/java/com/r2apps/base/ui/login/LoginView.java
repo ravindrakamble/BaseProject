@@ -10,9 +10,9 @@ public interface LoginView extends ResponseHandlerView{
 
     void hideProgress();
 
-    void setUsernameError(byte error);
+    void setUsernameError(int errorString);
 
-    void setPasswordError(byte error);
+    void setPasswordError(int  errorString);
 
     void navigateToHome();
 }
