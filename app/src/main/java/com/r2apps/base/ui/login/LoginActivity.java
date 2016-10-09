@@ -36,8 +36,17 @@ public class LoginActivity extends BaseActivity implements Login.View, OnClickLi
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
+        initializePresenter();
+        initializeViews();
+        checkRequiredPermissions();
+    }
+
+    private void initializePresenter(){
         presenter = new LoginPresenter();
         presenter.takeView(this);
+    }
+
+    private void initializeViews(){
         // Set up the login form.
         mEmailView = (AutoCompleteTextView) findViewById(R.id.email);
 
@@ -51,12 +60,13 @@ public class LoginActivity extends BaseActivity implements Login.View, OnClickLi
 
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mEmailSignInButton.setOnClickListener(this);
+    }
 
+    private void checkRequiredPermissions(){
         if (!AppPermissions.checkPermissionsForStorage(this)) {
             AppPermissions.askForRationalStorage(this);
         }
     }
-
     @Override
     protected void onDestroy() {
         presenter.onDestroy();
@@ -95,6 +105,7 @@ public class LoginActivity extends BaseActivity implements Login.View, OnClickLi
 
     @Override
     public void onClick(View v) {
+        hideSoftInput();
         presenter.validateCredentials(mEmailView.getText().toString(), mPasswordView.getText().toString());
     }
 

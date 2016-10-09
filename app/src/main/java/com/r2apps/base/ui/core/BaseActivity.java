@@ -23,7 +23,7 @@ import timber.log.Timber;
 /**
  * Created by user on 7/12/2016.
  */
-public abstract class BaseActivity extends AppCompatActivity {
+public abstract class BaseActivity extends AppCompatActivity implements View.OnClickListener{
     /**
      * Class tag. Used for debug.
      */
